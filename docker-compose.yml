@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  db:
+    image: ankane/pgvector:latest  # Includes PostgreSQL and pgvector extension
+    container_name: entropyos_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-entropyos}
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-entropyos}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    container_name: entropyos_backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      llm_proxy:
+        condition: service_started # Assuming proxy starts quickly
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:${DB_PORT:-5432}/${POSTGRES_DB:-entropyos}
+      LLM_PROXY_URL: http://llm_proxy:${LLM_PROXY_PORT:-8080}
+      HATCHET_CLIENT_TENANT_ID: ${HATCHET_CLIENT_TENANT_ID}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      # Add other necessary backend env vars from .env
+    volumes:
+      - ./backend:/app # Mount backend code for hot reloading
+    # Command for development with hot reloading (adjust if needed)
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  hatchet-worker:
+    container_name: entropyos_worker
+    build:
+      context: ./backend # Assuming worker code lives alongside backend for now
+      dockerfile: Dockerfile.worker # Needs a separate Dockerfile or adjustments
+    depends_on:
+      db:
+        condition: service_healthy
+      llm_proxy:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:${DB_PORT:-5432}/${POSTGRES_DB:-entropyos}
+      LLM_PROXY_URL: http://llm_proxy:${LLM_PROXY_PORT:-8080}
+      HATCHET_CLIENT_TENANT_ID: ${HATCHET_CLIENT_TENANT_ID}
+      # Add other necessary worker env vars from .env
+    volumes:
+      - ./backend:/app # Mount code if worker definition is in the backend dir
+    # Command to run the Hatchet worker
+    command: python -m hatchet_sdk.run_worker --name entropyos-worker
+
+  # frontend:
+  #   container_name: entropyos_frontend
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "${FRONTEND_PORT:-3000}:3000"
+  #   depends_on:
+  #     - backend
+  #   environment:
+  #     # Vite expects env vars prefixed with VITE_
+  #     VITE_API_URL: http://localhost:${BACKEND_PORT:-8000} # URL for frontend to reach backend
+  #   volumes:
+  #     - ./frontend:/app # Mount frontend code for hot reloading
+  #     - /app/node_modules # Restored volume mount
+  #   # Command for development (adjust based on React setup, e.g., Vite/CRA)
+  #   command: npm run dev -- --host
+
+  llm_proxy:
+    container_name: entropyos_llm_proxy
+    # Placeholder - Replace with actual LLM proxy image/build context
+    image: python:3.11-slim
+    ports:
+      - "${LLM_PROXY_PORT:-8080}:8080"
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      # Add other proxy env vars
+    # Example command for a simple proxy (replace with actual)
+    command: echo "LLM Proxy Placeholder - Replace with actual service"
+
+volumes:
+  postgres_data:
+
+# Note: Dockerfiles for backend, frontend, and worker are needed.
+# This assumes a specific structure and commands; adjust as necessary. 

@@ -1,0 +1,26 @@
+# Core
+fastapi
+uvicorn[standard]
+
+# Database
+psycopg2-binary
+sqlalchemy
+alembic
+
+# Vector DB
+# pgvector # Assuming pgvector, install if needed via pip or OS package manager inside Docker
+pgvector # <-- Added for SQLAlchemy integration
+
+# Task Queue
+hatchet-sdk
+
+# LLM Client (Example for Gemini)
+# google-generativeai
+google-generativeai
+
+# Utilities
+pydantic
+python-dotenv
+pydantic-settings
+numpy
+scipy # <-- Added for stats/Gini

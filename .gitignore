@@ -155,3 +155,11 @@ htmlcov/
 
 # Local Files
 **/outline/
+**/.cursor/
+**/.cursorrules/
+**/.cursorignore/
+**/.cursorignorerules/
+**/.cursorignorefiles/
+**/.cursorignorefolders/
+**/.cursorignoreextensions/
+**/.cursorignorepatterns/
