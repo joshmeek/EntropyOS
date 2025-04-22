@@ -46,7 +46,7 @@ Deliver a working proof-of-concept simulating the effect of a single event (Univ
 
 1.  **Clone the repository:**
     ```bash
-    git clone <your-repo-url>
+    git clone git@github.com:joshmeek/EntropyOS.git
     cd EntropyOS
     ```
 
